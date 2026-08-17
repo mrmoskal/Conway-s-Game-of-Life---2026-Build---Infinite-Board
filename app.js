@@ -20,7 +20,7 @@ window.addEventListener("load", () => {
     cellSize2D.width = baseCellSize;
     cellSize2D.height = baseCellSize;
 
-    if (world) world.draw(canvasContext);
+    if (world) world.render(canvasContext);
   };
 
   // camera state:
@@ -44,49 +44,43 @@ window.addEventListener("load", () => {
   };
 
   const cell = (posY) => {
-    return { y: posY, isChecked: false };
+    return { y: posY };
   };
   const col = (posX, liveCells = []) => {
     return {
       x: posX,
       cells: liveCells,
 
-      // builders:
+      // functions:
       addCell: function (posY) {
-        if (!this.cells.some((currCells) => currCells.y === posY)) {
-          const currCell = cell(posY);
-          this.cells.push(currCell);
-        }
-        return this;
+        // add if does not exist
+        let currCell = this.cells.find((currCells) => currCells.y === posY);
+        if (currCell) return currCell; // cell exists already
+
+        currCell = cell(posY);
+        this.cells.push(currCell);
+        return currCell;
       },
       sortCells: function () {
+        // sort accending
         this.cells.sort((cell1, cell2) => cell1.y - cell2.y);
-        return this;
       },
-      setAllUnchecked: function () {
-        this.cells.forEach((currCell) => (currCell.isChecked = false));
-        return this;
-      },
-
-      // boolean checks:
       canHaveNeighbourWithCol: function (givenCol) {
         return givenCol && Math.abs(this.x - givenCol.x) <= 1;
       },
-
-      // other:
       getCellNeighboursWithCol: function (cellIndex, givenCol) {
         // assume sorted.
         if (!this.canHaveNeighbourWithCol(givenCol)) return []; // no neighbours
         const currentCell = this.cells[cellIndex];
         if (!currentCell) return []; // no cell - argo: no neighbours
 
-        return givenCol.cells.filter((targetCell) => {
-          // fillter from cells array to return only neighbours
-          const distY = Math.abs(currentCell.y - targetCell.y);
-          const distX = Math.abs(this.x - givenCol.x);
+        // fillter from cells array to return only neighbours:
+        return givenCol.cells.filter((cellOfGivenCol) => {
+          const distY = Math.abs(currentCell.y - cellOfGivenCol.y),
+            distX = Math.abs(this.x - givenCol.x),
+            isSameCell = distX === 0 && distY === 0;
 
-          if (distX === 0 && distY === 0) return false;
-          return distY <= 1;
+          return distY <= 1 && !isSameCell; //
         });
       },
     };
@@ -95,33 +89,32 @@ window.addEventListener("load", () => {
     return {
       cols: [],
 
-      // builders:
-      addCell: function (posX, posY) {
+      // functions:
+      addCol: function (posX) {
+        // add if does not exist
         let currCol = this.cols.find((currCol) => currCol.x === posX);
-        if (!currCol) {
-          currCol = col(posX);
-          this.cols.push(currCol);
-        }
-        currCol.addCell(posY);
-        return this;
+        if (currCol) return currCol; // column exists already
+
+        currCol = col(posX);
+        this.cols.push(currCol);
+        return currCol;
+      },
+      addCell: function (posX, posY) {
+        // add if does not exist
+        const currCol = this.addCol(posX); // will add only if there wasn't any
+        return currCol.addCell(posY); // return created/found cell
       },
       sortCols: function () {
-        this.cols.sort((col1, col2) => col1.x - col2.y);
+        this.cols.sort((col1, col2) => col1.x - col2.x);
         return this;
       },
       sortCells: function () {
-        this.cols.sort((currCol) => currCol.sortCells());
-        return this;
-      },
-      setAllUnchecked: function () {
-        this.cols.forEach((currCol) => currCol.setAllUnchecked());
+        this.cols.forEach((currCol) => currCol.sortCells());
         return this;
       },
       sort: function () {
-        return this.sortCells().sortCols().setAllUnchecked();
+        return this.sortCells().sortCols();
       },
-
-      // other:
       getCellNeighbours: function (colIndex, cellIndex) {
         // assume sorted.
         const givenCol = this.cols[colIndex];
@@ -138,11 +131,9 @@ window.addEventListener("load", () => {
 
         return neighbours;
       },
-
       // TODO - reconstruct & fix & remake ==>
-      // create next gen:
       nextGeneration: function () {
-        this.sort();
+        // assume sorted
         const nextPop = population();
         const neighborCounts = new Map();
 
@@ -154,10 +145,10 @@ window.addEventListener("load", () => {
               nextPop.addCell(currCol.x, currCell.y);
             }
 
-            for (let dx = -1; dx <= 1; dx++) {
-              for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                const key = `${currCol.x + dx},${currCell.y + dy}`;
+            for (let distX = -1; distX <= 1; distX++) {
+              for (let distY = -1; distY <= 1; distY++) {
+                if (distX === 0 && distY === 0) continue; // skip current cell
+                const key = `${currCol.x + distX},${currCell.y + distY}`;
                 neighborCounts.set(key, (neighborCounts.get(key) || 0) + 1);
               }
             }
@@ -174,9 +165,7 @@ window.addEventListener("load", () => {
 
         return nextPop.sort();
       },
-
-      // render:
-      draw: function (context) {
+      render: function (context) {
         context.clearRect(0, 0, worldSize2D.width, worldSize2D.height);
 
         // Grid lines
@@ -196,10 +185,10 @@ window.addEventListener("load", () => {
 
         // Live cells inside canvas bounds
         context.fillStyle = "#222222";
-        this.cols.forEach((colObj) => {
-          colObj.cells.forEach((cellObj) => {
-            const drawX = (colObj.x - worldAnchor2D.x) * cellSize2D.width;
-            const drawY = (cellObj.y - worldAnchor2D.y) * cellSize2D.height;
+        this.cols.forEach((currCol) => {
+          currCol.cells.forEach((currCell) => {
+            const drawX = (currCol.x - worldAnchor2D.x) * cellSize2D.width;
+            const drawY = (currCell.y - worldAnchor2D.y) * cellSize2D.height;
 
             if (
               drawX >= 0 &&
@@ -227,7 +216,7 @@ window.addEventListener("load", () => {
 
   // initial seed (Glider pattern):
   let world = population();
-  const max = 500;
+  const max = 1000;
   for (let i = 0, j = 0; j < max; i++) {
     if (i === max - 1) {
       i = 0;
@@ -241,18 +230,19 @@ window.addEventListener("load", () => {
 
   resizeCanvas(); // init canvas
 
-  // loop execution:
+  // loop farme:
   function tick() {
-    world.draw(canvasContext);
+    world.render(canvasContext);
     world = world.nextGeneration();
-    setTimeout(() => {
-      requestAnimationFrame(tick);
-    }, 250);
   }
-  tick();
 
   // events:
   window.addEventListener("contextmenu", (e) => e.preventDefault()); // make right click dropdown menu disabled on canves
+  window.addEventListener("keydownb", (e) => {
+    if (e.code === "Space") {
+      requestAnimationFrame(tick);
+    }
+  });
   canvas.addEventListener("click", (e) => {
     if (hasDragged) return;
 
@@ -265,7 +255,7 @@ window.addEventListener("load", () => {
     );
 
     world.addCell(cellX, cellY).sort();
-    world.draw(canvasContext);
+    world.render(canvasContext);
   }); // draw controls
   window.addEventListener("resize", resizeCanvas); // resize listener
   // camera controls - panning ==>
@@ -286,7 +276,7 @@ window.addEventListener("load", () => {
 
     worldAnchor2D.x = anchorAtDragStart.x - dx / cellSize2D.width;
     worldAnchor2D.y = anchorAtDragStart.y - dy / cellSize2D.height;
-    world.draw(canvasContext);
+    world.render(canvasContext);
   });
   window.addEventListener("mouseup", () => {
     isDragging = false;
@@ -310,6 +300,6 @@ window.addEventListener("load", () => {
     worldAnchor2D.x = worldMouseX - mouseX / cellSize2D.width;
     worldAnchor2D.y = worldMouseY - mouseY / cellSize2D.height;
 
-    world.draw(canvasContext);
+    world.render(canvasContext);
   });
 });
