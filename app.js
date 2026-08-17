@@ -4,14 +4,13 @@ window.addEventListener("load", () => {
   const canvasContext = canvas.getContext("2d");
 
   const worldAnchor2D = { x: 0, y: 0 };
-  const worldSize2D = { width: 300, height: 200 };
+  const worldSize2D = { width: window.innerWidth, height: window.innerHeight };
   const cellSize2D = { width: 30, height: 30 };
 
   // dynamic canvas & cell resizing
   const resizeCanvas = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
+    canvas.width = worldSize2D.width;
+    canvas.height = worldSize2D.height;
     // calculate uniform square cell size scaled to ratio units
     const baseCellSize = Math.min(
       canvas.width / worldSize2D.width,
@@ -181,19 +180,19 @@ window.addEventListener("load", () => {
         context.clearRect(0, 0, worldSize2D.width, worldSize2D.height);
 
         // Grid lines
-        context.strokeStyle = "#e0e0e0";
-        for (let x = 0; x <= worldSize2D.width; x += cellSize2D.width) {
-          context.beginPath();
-          context.moveTo(x, 0);
-          context.lineTo(x, worldSize2D.height);
-          context.stroke();
-        }
-        for (let y = 0; y <= worldSize2D.height; y += cellSize2D.height) {
-          context.beginPath();
-          context.moveTo(0, y);
-          context.lineTo(worldSize2D.width, y);
-          context.stroke();
-        }
+        // context.strokeStyle = "#e0e0e0";
+        // for (let x = 0; x <= worldSize2D.width; x += cellSize2D.width) {
+        //   context.beginPath();
+        //   context.moveTo(x, 0);
+        //   context.lineTo(x, worldSize2D.height);
+        //   context.stroke();
+        // }
+        // for (let y = 0; y <= worldSize2D.height; y += cellSize2D.height) {
+        //   context.beginPath();
+        //   context.moveTo(0, y);
+        //   context.lineTo(worldSize2D.width, y);
+        //   context.stroke();
+        // }
 
         // Live cells inside canvas bounds
         context.fillStyle = "#222222";
