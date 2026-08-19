@@ -7,6 +7,53 @@ window.addEventListener("load", () => {
   const worldSize2D = { width: window.innerWidth, height: window.innerHeight };
   const cellSize2D = { width: 30, height: 30 };
 
+  const renderInternalSetting = {
+    // zoom limits - for zooming into/out of board:
+    zoomMax: 5,
+    zoomMin: 1,
+
+    // game fps settings:
+    maxRenderFPS: 120,
+    maxRenderFPSMult: 4,
+
+    // camera offset (to render (0, 0) at middle, camera must be offset)
+    cameraOffsetX: window.innerWidth / 2,
+    cameraOffsetY: window.innerHeight / 2,
+  };
+
+  const renderGeneralSetting = {
+    cellSape: "Square",
+    cellColor: ["#222222", "#AAAAAA", "#9988BB"],
+  };
+
+  const renderActiveState = {
+    anchor2D: { x: 0, y: 0 },
+    cellSize2D: { width: 30, height: 30 },
+    isCameraMoving: false,
+    isRanderLoopPaused: false,
+    currRenderFPS:
+      renderInternalSetting.maxRenderFPS /
+      renderInternalSetting.maxRenderFPSMult, // default fps max rate (can - if possible - increase max fps limit)
+    zoomCurrent: renderInternalSetting.zoomMin,
+    currCellColorIndex: 0, // index of cell color out of cell colors array
+  };
+
+  const stateChecker = {
+    /*
+      enforces cell state rules:
+      * (1) neighbour count < 2 ==> death (unpopulated)
+      * (2) neighbour count > 3 ==> death (over-populated)
+      * (3) neighbour count between 2 & 3 ==> same state
+      * (4) neighbour count == 3 && state == dead ==> live (reproduction)
+    */
+    shouldSurvive: function (liveNeighbourCount) {
+      return liveNeighbourCount === 2 || liveNeighbourCount === 3;
+    },
+    shouldArise: function (liveNeighbourCount) {
+      return liveNeighbourCount === 3;
+    },
+  };
+
   // dynamic canvas & cell resizing
   const resizeCanvas = () => {
     canvas.width = worldSize2D.width;
@@ -28,20 +75,6 @@ window.addEventListener("load", () => {
   let dragStart = { x: 0, y: 0 };
   let anchorAtDragStart = { x: 0, y: 0 };
   let hasDragged = false;
-
-  const stateChecker = {
-    // enforces cell state rules:
-    // (1) neighbour count < 2 ==> death (unpopulated)
-    // (2) neighbour count > 3 ==> death (over-populated)
-    // (3) neighbour count between 2 & 3 ==> same state
-    // (4) neighbour count == 3 && state == dead ==> live (reproduction)
-    shouldSurvive: function (liveNeighbourCount) {
-      return liveNeighbourCount === 2 || liveNeighbourCount === 3;
-    },
-    shouldArise: function (liveNeighbourCount) {
-      return liveNeighbourCount === 3;
-    },
-  };
 
   const cell = (posY) => {
     return { y: posY };
