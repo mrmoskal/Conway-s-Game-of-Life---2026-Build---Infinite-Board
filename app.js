@@ -7,37 +7,6 @@ window.addEventListener("load", () => {
   const worldSize2D = { width: window.innerWidth, height: window.innerHeight };
   const cellSize2D = { width: 30, height: 30 };
 
-  const renderInternalSetting = {
-    // zoom limits - for zooming into/out of board:
-    zoomMax: 5,
-    zoomMin: 1,
-
-    // game fps settings:
-    maxRenderFPS: 120,
-    maxRenderFPSMult: 4,
-
-    // camera offset (to render (0, 0) at middle, camera must be offset)
-    cameraOffsetX: window.innerWidth / 2,
-    cameraOffsetY: window.innerHeight / 2,
-  };
-
-  const renderGeneralSetting = {
-    cellSape: "Square",
-    cellColor: ["#222222", "#AAAAAA", "#9988BB"],
-  };
-
-  const renderActiveState = {
-    anchor2D: { x: 0, y: 0 },
-    cellSize2D: { width: 30, height: 30 },
-    isCameraMoving: false,
-    isRanderLoopPaused: false,
-    currRenderFPS:
-      renderInternalSetting.maxRenderFPS /
-      renderInternalSetting.maxRenderFPSMult, // default fps max rate (can - if possible - increase max fps limit)
-    zoomCurrent: renderInternalSetting.zoomMin,
-    currCellColorIndex: 0, // index of cell color out of cell colors array
-  };
-
   const stateChecker = {
     /*
       enforces cell state rules:
@@ -242,14 +211,92 @@ window.addEventListener("load", () => {
     };
   };
 
+  const renderInternalSetting = {
+    // zoom limits - for zooming into/out of board:
+    zoomMax: 5,
+    zoomMin: 1,
+
+    // game fps settings:
+    maxRenderFPS: 120,
+    maxRenderFPSMult: 4,
+
+    // camera - offset (to render (0, 0) at middle, camera must be offset) & size:
+    cameraWidth: window.innerWidth,
+    cameraHeight: window.innerHeight,
+    cameraOffsetX: window.innerWidth / 2,
+    cameraOffsetY: window.innerHeight / 2,
+  };
+
+  const renderGeneralSetting = {
+    cellSape: "Square",
+    cellColors: ["#222222", "#AAAAAA", "#9988BB"],
+  };
+
+  const renderActiveState = {
+    anchor2D: { x: 0, y: 0 },
+    cellSize2D: { width: 15, height: 15 },
+    isCameraMoving: false,
+    isRanderLoopPaused: false,
+    currRenderFPS:
+      renderInternalSetting.maxRenderFPS /
+      renderInternalSetting.maxRenderFPSMult, // default fps max rate (can - if possible - increase max fps limit)
+    zoomCurrent: renderInternalSetting.zoomMin,
+    cellColorIndex: 0, // index of cell color out of cell colors array
+  };
+
   // TODO - reconstruct & fix & remake ==>
   // init canvas size:
-  canvas.width = worldSize2D.width;
-  canvas.height = worldSize2D.height;
+  canvas.width = renderInternalSetting.cameraWidth;
+  canvas.height = renderInternalSetting.cameraHeight;
+
+  function render(givenPopulation) {
+    // render the world in camera:
+    canvasContext.clearRect(
+      0,
+      0,
+      renderInternalSetting.cameraWidth,
+      renderInternalSetting.cameraHeight,
+    ); // clear screen
+
+    givenPopulation.cols.forEach((currCol) => {
+      currCol.cells.forEach((currCell) => {
+        const cellWidthAtX = currCol.x + renderActiveState.cellSize2D.width;
+        const cellHeightAtY = currCell.y + renderActiveState.cellSize2D.height;
+
+        const isDrawX =
+          cellWidthAtX >=
+            renderActiveState.anchor2D.x -
+              renderInternalSetting.cameraOffsetX &&
+          cellWidthAtX <=
+            renderActiveState.anchor2D.x +
+              renderInternalSetting.cameraOffsetX +
+              renderActiveState.cellSize2D.width; // will allow cells just out of cammera to be drawn
+        const isDrawY =
+          cellHeightAtY >=
+            renderActiveState.anchor2D.y -
+              renderInternalSetting.cameraOffsetY &&
+          cellHeightAtY <=
+            renderActiveState.anchor2D.y +
+              renderInternalSetting.cameraOffsetY +
+              renderActiveState.cellSize2D.height; // will allow cells just out of cammera to be drawn
+
+        if (isDrawX && isDrawY) {
+          canvasContext.fillStyle =
+            renderGeneralSetting.cellColors[renderActiveState.cellColorIndex]; // set cell color
+          canvasContext.fillRect(
+            currCol.x,
+            currCell.y,
+            renderActiveState.cellSize2D.width,
+            renderActiveState.cellSize2D.height,
+          ); // draw cell
+        }
+      });
+    });
+  }
 
   // initial seed (Glider pattern):
   let world = population();
-  const max = 1000;
+  const max = 250;
   for (let i = 0, j = 0; j < max; i++) {
     if (i === max - 1) {
       i = 0;
@@ -261,19 +308,17 @@ window.addEventListener("load", () => {
   }
   world.sort();
 
-  resizeCanvas(); // init canvas
-
   // loop farme:
-  function tick() {
-    world.render(canvasContext);
+  function drawingTick() {
+    render(world);
     world = world.nextGeneration();
   }
 
   // events:
   window.addEventListener("contextmenu", (e) => e.preventDefault()); // make right click dropdown menu disabled on canves
-  window.addEventListener("keydownb", (e) => {
+  window.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
-      requestAnimationFrame(tick);
+      requestAnimationFrame(drawingTick);
     }
   });
   canvas.addEventListener("click", (e) => {
