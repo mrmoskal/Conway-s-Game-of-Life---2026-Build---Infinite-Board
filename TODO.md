@@ -11,3 +11,4 @@
 - color\pallate picker
 - bacground changer
 - grid draw\remove option
+- save stylinh configurations in browser
