@@ -10,16 +10,33 @@ html {
   color-scheme: dark;
 }
 
-.game-board {
-  /*
-    // set in js -> not used
-    width: 100vw;
-    height: 100vh; 
-  */
+body {
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.game-world {
+  width: 70vw;
+  height: 65vh;
+
+  border: 0.5vmin solid wheat;
+
+  position: relative;
+  display: block;
+}
+
+.game-world .fullscreen {
+  width: 100vw;
+  height: 100vh;
 
   position: absolute;
   top: 0;
   left: 0;
-
-  display: block;
 }
